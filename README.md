@@ -20,7 +20,7 @@ pg-vault helps you store and manage PostgreSQL connection credentials securely, 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/pg-vault.git
+git clone https://github.com/okeeffed/pg-vault.git
 cd pg-vault
 ./install.sh
 ```
@@ -29,7 +29,7 @@ This will build and install pg-vault to `~/.local/bin/pg-vault`. Make sure `~/.l
 
 ### From Releases
 
-Download the latest release for your platform from the [releases page](https://github.com/yourusername/pg-vault/releases).
+Download the latest release for your platform from the [releases page](https://github.com/okeeffed/pg-vault/releases).
 
 ## Quick Start
 
@@ -106,3 +106,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT License - see LICENSE file for details.
+
