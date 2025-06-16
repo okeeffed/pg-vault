@@ -57,9 +57,9 @@ jobs:
     - name: Create archive
       run: |
         binary_name="pg-vault"
-        archive_name="pg-vault-macos-${{ matrix.arch }}.tar.gz"
+        archive_name="pg-vault-macos-${{ matrix.arch }}.zip"
         cp "target/${{ matrix.target }}/release/$binary_name" .
-        tar -czf "$archive_name" "$binary_name"
+        zip "$archive_name" "$binary_name"
         echo "ARCHIVE_NAME=$archive_name" >> $GITHUB_ENV
 
     - name: Notarize archive
