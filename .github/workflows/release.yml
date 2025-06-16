@@ -71,6 +71,9 @@ jobs:
           --team-id "${{ secrets.APPLE_TEAM_ID }}" \
           --wait
 
+        # Extract binary from archive for stapling
+        unzip "${{ env.ARCHIVE_NAME }}"
+        
         # Staple the notarization to the binary
         xcrun stapler staple "pg-vault"
         
