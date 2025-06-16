@@ -71,8 +71,12 @@ jobs:
           --team-id "${{ secrets.APPLE_TEAM_ID }}" \
           --wait
 
-        # Staple the notarization to the archive
-        xcrun stapler staple "${{ env.ARCHIVE_NAME }}"
+        # Staple the notarization to the binary
+        xcrun stapler staple "pg-vault"
+        
+        # Recreate archive with stapled binary
+        rm "${{ env.ARCHIVE_NAME }}"
+        zip "${{ env.ARCHIVE_NAME }}" "pg-vault"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
