@@ -33,6 +33,27 @@ jobs:
     - name: Build
       run: cargo build --release --target ${{ matrix.target }}
 
+    - name: Import Code-Signing Certificates
+      uses: Apple-Actions/import-codesign-certs@v2
+      with:
+        p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+    - name: Sign binary
+      run: |
+        binary_name="pg-vault"
+        binary_path="target/${{ matrix.target }}/release/$binary_name"
+        
+        # Sign the binary
+        codesign --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" \
+          --options runtime \
+          --verbose \
+          --force \
+          "$binary_path"
+        
+        # Verify signing
+        codesign --verify --verbose "$binary_path"
+
     - name: Create archive
       run: |
         binary_name="pg-vault"
@@ -40,6 +61,18 @@ jobs:
         cp "target/${{ matrix.target }}/release/$binary_name" .
         tar -czf "$archive_name" "$binary_name"
         echo "ARCHIVE_NAME=$archive_name" >> $GITHUB_ENV
+
+    - name: Notarize archive
+      run: |
+        # Submit for notarization
+        xcrun notarytool submit "${{ env.ARCHIVE_NAME }}" \
+          --apple-id "${{ secrets.APPLE_ID }}" \
+          --password "${{ secrets.APPLE_ID_PASSWORD }}" \
+          --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+          --wait
+
+        # Staple the notarization to the archive
+        xcrun stapler staple "${{ env.ARCHIVE_NAME }}"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

@@ -8,6 +8,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use tabled::{Table, Tabled};
 
 #[derive(Parser)]
 #[command(name = "pg-vault")]
@@ -56,6 +57,20 @@ struct ConnectionInfo {
     host: String,
     port: u16,
     database: String,
+    username: String,
+}
+
+#[derive(Tabled)]
+struct ConnectionDisplay {
+    #[tabled(rename = "Name")]
+    name: String,
+    #[tabled(rename = "Host")]
+    host: String,
+    #[tabled(rename = "Port")]
+    port: u16,
+    #[tabled(rename = "Database")]
+    database: String,
+    #[tabled(rename = "Username")]
     username: String,
 }
 
@@ -162,13 +177,19 @@ fn main() -> Result<()> {
                 return Ok(());
             }
 
-            println!("Stored connections:");
-            for (name, info) in &connections {
-                println!(
-                    "  {} - {}@{}:{}/{}",
-                    name, info.username, info.host, info.port, info.database
-                );
-            }
+            let display_connections: Vec<ConnectionDisplay> = connections
+                .iter()
+                .map(|(name, info)| ConnectionDisplay {
+                    name: name.clone(),
+                    host: info.host.clone(),
+                    port: info.port,
+                    database: info.database.clone(),
+                    username: info.username.clone(),
+                })
+                .collect();
+
+            let table = Table::new(display_connections);
+            println!("{}", table);
         }
         Commands::Connect { name } => {
             let connections = load_connections()?;
