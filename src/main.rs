@@ -9,6 +9,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tabled::{Table, Tabled};
+use urlencoding::encode;
 
 #[derive(Parser)]
 #[command(name = "pg-vault")]
@@ -32,6 +33,8 @@ enum Commands {
         database: String,
         #[arg(short, long, help = "Username")]
         username: String,
+        #[arg(long, help = "Store as IAM-authenticated connection (no password required)")]
+        iam: bool,
     },
     #[command(about = "List stored connections")]
     List,
@@ -50,6 +53,11 @@ enum Commands {
         #[arg(help = "Connection name/alias")]
         name: String,
     },
+    #[command(about = "Connect using AWS IAM authentication")]
+    Iam {
+        #[arg(help = "Connection name/alias")]
+        name: String,
+    },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -58,6 +66,8 @@ struct ConnectionInfo {
     port: u16,
     database: String,
     username: String,
+    #[serde(default)]
+    iam_auth: bool,
 }
 
 #[derive(Tabled)]
@@ -72,6 +82,8 @@ struct ConnectionDisplay {
     database: String,
     #[tabled(rename = "Username")]
     username: String,
+    #[tabled(rename = "Auth Type")]
+    auth_type: String,
 }
 
 fn get_config_path() -> Result<PathBuf> {
@@ -144,29 +156,36 @@ fn main() -> Result<()> {
             port,
             database,
             username,
+            iam,
         } => {
-            print!("Enter password for {}: ", username);
-            io::stdout().flush()?;
-            let password = read_password()?;
-
             let connection_info = ConnectionInfo {
                 host,
                 port,
                 database,
-                username,
+                username: username.clone(),
+                iam_auth: iam,
             };
 
             let mut connections = load_connections()?;
             connections.insert(name.clone(), connection_info);
             save_connections(&connections)?;
 
-            match store_password(&name, &password) {
-                Ok(()) => println!("✓ Credentials stored successfully for '{}'", name),
-                Err(e) => {
-                    println!("✗ Failed to store password: {}", e);
-                    println!(
-                        "Connection metadata saved, but you may need to enter the password each time."
-                    );
+            if iam {
+                println!("✓ IAM connection '{}' stored successfully for user '{}'", name, username);
+                println!("  Note: This connection will use AWS IAM authentication (no password stored)");
+            } else {
+                print!("Enter password for {}: ", username);
+                io::stdout().flush()?;
+                let password = read_password()?;
+
+                match store_password(&name, &password) {
+                    Ok(()) => println!("✓ Credentials stored successfully for '{}'", name),
+                    Err(e) => {
+                        println!("✗ Failed to store password: {}", e);
+                        println!(
+                            "Connection metadata saved, but you may need to enter the password each time."
+                        );
+                    }
                 }
             }
         }
@@ -185,6 +204,7 @@ fn main() -> Result<()> {
                     port: info.port,
                     database: info.database.clone(),
                     username: info.username.clone(),
+                    auth_type: if info.iam_auth { "IAM".to_string() } else { "Password".to_string() },
                 })
                 .collect();
 
@@ -196,6 +216,13 @@ fn main() -> Result<()> {
             let connection_info = connections
                 .get(&name)
                 .context(format!("Connection '{}' not found", name))?;
+
+            if connection_info.iam_auth {
+                anyhow::bail!(
+                    "Connection '{}' is configured for IAM authentication. Use 'pg-vault iam {}' instead of 'pg-vault connect {}'.",
+                    name, name, name
+                );
+            }
 
             let password = get_password(&name)
                 .context(format!("Could not retrieve password for '{}'. You may need to store the credentials again.", name))?;
@@ -306,6 +333,86 @@ fn main() -> Result<()> {
 
             if !status.success() {
                 anyhow::bail!("Shell session exited with error code: {:?}", status.code());
+            }
+        }
+        Commands::Iam { name } => {
+            let connections = load_connections()?;
+            let connection_info = connections
+                .get(&name)
+                .context(format!("Connection '{}' not found", name))?;
+
+            if !connection_info.iam_auth {
+                anyhow::bail!(
+                    "Connection '{}' is not configured for IAM authentication. Use 'pg-vault store --iam' to create an IAM-enabled connection.",
+                    name
+                );
+            }
+
+            println!(
+                "Generating IAM authentication token for {} ({}@{}:{}/{})...",
+                name,
+                connection_info.username,
+                connection_info.host,
+                connection_info.port,
+                connection_info.database
+            );
+
+            // Generate IAM auth token using AWS CLI
+            let output = Command::new("aws")
+                .args([
+                    "rds",
+                    "generate-db-auth-token",
+                    "--hostname",
+                    &connection_info.host,
+                    "--port",
+                    &connection_info.port.to_string(),
+                    "--username",
+                    &connection_info.username,
+                ])
+                .output()
+                .context("Failed to execute AWS CLI command. Make sure AWS CLI is installed and configured.")?;
+
+            if !output.status.success() {
+                let error_msg = String::from_utf8_lossy(&output.stderr);
+                anyhow::bail!("AWS CLI command failed: {}", error_msg);
+            }
+
+            let iam_token = String::from_utf8(output.stdout)
+                .context("Invalid UTF-8 in AWS CLI output")?
+                .trim()
+                .to_string();
+
+            if iam_token.is_empty() {
+                anyhow::bail!("Empty IAM token received from AWS CLI");
+            }
+
+            println!("✓ IAM token generated successfully");
+            println!("Token length: {} characters", iam_token.len());
+            println!("Token preview: {}...", &iam_token[..std::cmp::min(50, iam_token.len())]);
+            println!("Connecting to PostgreSQL using IAM authentication...");
+
+            // Connect to PostgreSQL using the IAM token as password
+            let encoded_token = encode(&iam_token);
+            let mut cmd = Command::new("psql");
+            cmd.arg(format!(
+                "postgres://{}:{}@{}:{}/{}?sslmode=require",
+                connection_info.username,
+                encoded_token,
+                connection_info.host,
+                connection_info.port,
+                connection_info.database
+            ))
+            .env("PGPASSWORD", &iam_token)
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+            let status = cmd.status().context(
+                "Failed to execute psql command. Make sure psql is installed and in your PATH.",
+            )?;
+
+            if !status.success() {
+                anyhow::bail!("psql exited with error code: {:?}", status.code());
             }
         }
     }
