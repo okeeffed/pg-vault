@@ -8,12 +8,13 @@ pg-vault helps you store and manage PostgreSQL connection credentials securely, 
 
 ## Features
 
-- = **Secure credential storage** - Uses system keychain with file fallback
-- =€ **Quick connections** - Connect to saved databases with a single command
-- < **Colorized psql sessions** - Automatically launches psql with your credentials
-- =' **Environment sessions** - Start shell sessions with PostgreSQL environment variables
-- =Ý **Connection management** - List, store, and remove connection configurations
-- <N **Cross-platform** - Works on macOS (Linux and Windows support planned)
+- **Secure credential storage** - Uses system keychain with file fallback
+- **Quick connections** - Connect to saved databases with a single command
+- **Colorized psql sessions** - Automatically launches psql with your credentials
+- **Environment sessions** - Start shell sessions with PostgreSQL environment variables
+- **Connection management** - List, store, and remove connection configurations
+- **Interactive TUI mode** - Terminal UI for browsing and managing connections
+- **Cross-platform** - Works on macOS (Linux and Windows support planned)
 
 ## Installation
 
@@ -60,7 +61,14 @@ pg-vault session mydb
 # Starts a shell with PGHOST, PGUSER, PGPASSWORD, DATABASE_URL, etc.
 ```
 
-### 5. Remove a connection
+### 5. Launch interactive TUI
+
+```bash
+pg-vault tui
+# Opens the terminal UI for managing connections
+```
+
+### 6. Remove a connection
 
 ```bash
 pg-vault remove mydb
@@ -72,6 +80,7 @@ pg-vault remove mydb
 - `pg-vault list` - List all stored connections
 - `pg-vault connect <name>` - Connect to database using psql
 - `pg-vault session <name>` - Start shell with PostgreSQL environment variables
+- `pg-vault tui` - Launch interactive terminal UI
 - `pg-vault remove <name>` - Remove stored credentials
 - `pg-vault --help` - Show help information
 
@@ -99,11 +108,6 @@ When using `pg-vault session <name>`, the following environment variables are se
 - PostgreSQL client tools (`psql` command)
 - macOS (for keychain integration)
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## License
 
 MIT License - see LICENSE file for details.
-
