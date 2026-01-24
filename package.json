@@ -1,0 +1,23 @@
+{
+  "name": "pg-vault",
+  "version": "0.2.0",
+  "description": "A cross-platform CLI tool for securely managing PostgreSQL credentials and connections.",
+  "main": "index.js",
+  "scripts": {
+    "changeset": "npx @changesets/cli",
+    "changeset:version": "npx @changesets/cli version",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/okeeffed/pg-vault.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/okeeffed/pg-vault/issues"
+  },
+  "homepage": "https://github.com/okeeffed/pg-vault#readme"
+}
