@@ -30,6 +30,12 @@ mkdir -p "$LOCAL_BIN"
 # Copy binary to local bin
 cp target/release/pg-vault "$LOCAL_BIN/"
 
+# Sign the binary for macOS (required for systems with endpoint protection like CrowdStrike)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo -e "${YELLOW}Signing binary for macOS...${NC}"
+    codesign --force --sign - "$LOCAL_BIN/pg-vault"
+fi
+
 echo -e "${GREEN}pg-vault installed to $LOCAL_BIN/pg-vault${NC}"
 echo -e "${YELLOW}Make sure $LOCAL_BIN is in your PATH${NC}"
 
