@@ -10,7 +10,7 @@ pg-vault helps you store and manage PostgreSQL connection credentials securely, 
 
 - **Secure credential storage** - Uses system keychain with file fallback
 - **Quick connections** - Connect to saved databases with a single command
-- **Colorized psql sessions** - Automatically launches psql with your credentials
+- **Quick psql sessions** - Automatically launches psql with your credentials
 - **Environment sessions** - Start shell sessions with PostgreSQL environment variables
 - **Connection management** - List, store, and remove connection configurations
 - **Interactive TUI mode** - Terminal UI for browsing and managing connections
@@ -27,6 +27,8 @@ cd pg-vault
 ```
 
 This will build and install pg-vault to `~/.local/bin/pg-vault`. Make sure `~/.local/bin` is in your PATH.
+
+> **Note:** On macOS, the install script automatically signs the binary. This is required for systems with endpoint protection software (e.g., CrowdStrike).
 
 ### From Releases
 

@@ -492,11 +492,6 @@ fn spawn_psql(info: &ConnectionInfo, password: &str) -> Result<()> {
     .stdout(Stdio::inherit())
     .stderr(Stdio::inherit());
 
-    // Only set pager if user hasn't configured one (respect user preferences)
-    if std::env::var("PSQL_PAGER").is_err() && std::env::var("PAGER").is_err() {
-        cmd.env("PAGER", "less -S -i -X");
-    }
-
     let status = cmd.status().context(
         "Failed to execute psql command. Make sure psql is installed and in your PATH.",
     )?;
